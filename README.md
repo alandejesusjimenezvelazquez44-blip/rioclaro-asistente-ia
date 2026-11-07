@@ -1,6 +1,7 @@
 # De datos dispersos a IA útil: asistente de IA para Distribuidora Río Claro
 
 **Proyecto integrador – Fundamentos de IA con tecnologías Microsoft (preparación AI-901)**
+
 **Autor:** Alan De Jesús Jiménez Velázquez · **Modalidad:** individual · **Opción elegida:** A (caso Distribuidora Río Claro)
 
 **Enlace del prototipo (sin instalación ni inicio de sesión):** https://rioclaro-asistente-2412.azurewebsites.net
