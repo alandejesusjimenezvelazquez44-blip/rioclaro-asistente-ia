@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente Río Claro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2f8f9;
+    --panel: #ffffff;
+    --ink: #12303a;
+    --muted: #55727c;
+    --line: #cfe1e5;
+    --water: #167f96;
+    --water-ink: #ffffff;
+    --user: #e3f1f4;
+    --warn: #8a5a12;
+    --warn-bg: #fbf1de;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f2127;
+      --panel: #162d35;
+      --ink: #e6f1f3;
+      --muted: #93b0b9;
+      --line: #264650;
+      --water: #3fb3cc;
+      --water-ink: #06222a;
+      --user: #1d3b45;
+      --warn: #f0c981;
+      --warn-bg: #3a2f17;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center;
+  }
+  .app { width: 100%; max-width: 760px; display: flex; flex-direction: column; height: 100%; padding: 16px; gap: 12px; }
+  header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: .95rem; }
+  .notice { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: .88rem; }
+  .log { flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 13px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--user); }
+  .msg.bot { align-self: flex-start; border: 1px solid var(--line); }
+  .msg.err { align-self: flex-start; background: var(--warn-bg); color: var(--warn); }
+  .empty { color: var(--muted); margin: auto; text-align: center; max-width: 36ch; }
+  form { display: flex; gap: 8px; }
+  input[type=text] { flex: 1; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  button { font: inherit; font-weight: 500; border: 0; border-radius: 10px; padding: 0 18px; background: var(--water); color: var(--water-ink); cursor: pointer; }
+  button:disabled { opacity: .55; cursor: wait; }
+  input:focus-visible, button:focus-visible { outline: 3px solid var(--water); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>Asistente de Distribuidora Río Claro</h1>
+    <p>Pregunta por productos, existencias, pedidos, devoluciones o políticas.</p>
+  </header>
+  <div class="notice" role="note">Estás hablando con una inteligencia artificial y puede equivocarse. Verifica con tu sucursal antes de decidir.</div>
+  <section class="log" id="log" aria-live="polite">
+    <p class="empty" id="empty">Prueba con: “¿Cuál es el plazo para devolver un producto dañado?”</p>
+  </section>
+  <form id="form">
+    <input type="text" id="msg" placeholder="Escribe tu pregunta" autocomplete="off" aria-label="Tu pregunta" required>
+    <button type="submit" id="send">Enviar</button>
+  </form>
+</main>
+<script>
+  const log = document.getElementById("log");
+  const form = document.getElementById("form");
+  const input = document.getElementById("msg");
+  const send = document.getElementById("send");
+  let previousId = null;
+
+  function add(text, cls) {
+    const empty = document.getElementById("empty");
+    if (empty) empty.remove();
+    const el = document.createElement("div");
+    el.className = "msg " + cls;
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    add(text, "user");
+    input.value = "";
+    send.disabled = true;
+    const waiting = add("Consultando…", "bot");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, previous_response_id: previousId })
+      });
+      const data = await res.json();
+      waiting.remove();
+      if (!res.ok) { add(data.error || "Ocurrió un error. Intenta de nuevo.", "err"); }
+      else { previousId = data.response_id; add(data.reply, "bot"); }
+    } catch (err) {
+      waiting.remove();
+      add("No hay conexión con el servidor. Intenta de nuevo.", "err");
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  });
+</script>
+</body>
+</html>
